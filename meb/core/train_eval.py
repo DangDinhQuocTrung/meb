@@ -232,6 +232,7 @@ class Validator(ABC):
         """
         train_idx = split_column[split_column != split_name].index.tolist()
         test_idx = split_column[split_column == split_name].index.tolist()
+        # print(data.shape, labels.shape, len(train_idx), len(test_idx))
         return data[train_idx], labels[train_idx], data[test_idx], labels[test_idx]
 
     def train_model(
@@ -263,15 +264,14 @@ class Validator(ABC):
                 # Get the current time
                 current_time = datetime.now()
                 # Format the time as a string
-                time_string = current_time.strftime('%H:%M:%S')   
+                time_string = current_time.strftime('%H:%M:%S')
 
                 folder_name = self.cf.weights_name
                 weights_name = self.cf.weights_name + '_' + split_name  + '_' + time_string + '.pth'
                 if os.path.exists(folder_name) == False:
-                    os.makedirs(folder_name)    
+                    os.makedirs(folder_name)
                 torch.save(self.model.state_dict(), weights_name)
-
-
+        return
 
     def train_one_epoch(self, epoch: int, dataloader: torch.utils.data.DataLoader):
         """Train model for single epoch
@@ -338,8 +338,16 @@ class Validator(ABC):
 
         Splits data according to the split and starts the evaluation process.
         """
-        
+
         # Load data
+        # print(self.split_column)
+        # print(df["dataset"].unique())
+        # print(df[df["dataset"] == "casme"].shape)
+        # print(df[df["dataset"] == "casme2"].shape)
+        # print(df[df["dataset"] == "casme3a"].shape)
+        # print(df[df["dataset"] == "samm"].shape)
+        # print(df[df["dataset"] == "fourd"].shape)
+        # print(df[df["dataset"] == "mmew"].shape)
         train_data, train_labels, test_data, test_labels = self.split_data(
             df[self.split_column], input_data, labels, split_name
         )
@@ -639,6 +647,5 @@ class IndividualDatasetEmotionValidator(Validator):
         if self.verbose:
             self.printer.print_test_validation(metrics)
         return outputs_list
-    
 
-    
+

@@ -421,6 +421,7 @@ class Dataset(ABC, DatasetConfig):
                 of_frames_list.append(of_frames)
             of_frames = np.concatenate(of_frames_list)
             return of_frames
+
         data_paths = [
             video_path
             for dataset in self.datasets

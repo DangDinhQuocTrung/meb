@@ -1,4 +1,4 @@
-torchvision==0.16.2 #temporary fix this because pytorchvideo has incompatible function(transforms) with torchvision 0.17.0 
+torchvision==0.16.2 #temporary fix this because pytorchvideo has incompatible function(transforms) with torchvision 0.17.0
 scikit-learn
 torch
 opencv-python
@@ -11,6 +11,9 @@ tqdm
 openpyxl
 notebook
 pytorchvideo
+xlrd
+click
+numba
 
 py_evm @ git+https://github.com/tvaranka/Python-evm#egg=py_evm
 get_image_size @ git+https://github.com/scardine/image_size#egg=get_image_size

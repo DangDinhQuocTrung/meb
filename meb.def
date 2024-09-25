@@ -1,0 +1,25 @@
+Bootstrap: docker
+From: nvidia/cuda:12.1.0-cudnn8-devel-ubuntu20.04
+
+%files
+    . /opt/package/
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends wget libgl1-mesa-dev libglib2.0-0 git
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash ./Miniconda3-latest-Linux-x86_64.sh -b -p /opt/miniconda && rm Miniconda3-latest-Linux-x86_64.sh
+    echo ". /opt/miniconda/etc/profile.d/conda.sh" >> $SINGULARITY_ENVIRONMENT
+    . /opt/miniconda/etc/profile.d/conda.sh
+
+    conda activate base
+    conda install -y python=3.10 pip
+    pip install torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cu121
+    pip install numpy==1.25.2 scipy matplotlib einops pytorchvideo
+
+    pip install -e /opt/package
+    pip install --force-reinstall -v numpy==1.25.2 numba
+    ldconfig /usr/local/cuda-12.1/compat
+    ldconfig /usr/local/cuda-12.1/targets/x86_64-linux/lib/stubs
+
+%environment
+    export PATH=/opt/miniconda/bin:${PATH}

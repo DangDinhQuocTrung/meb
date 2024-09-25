@@ -1,4 +1,4 @@
-from .datasets import (
+from .datasets_custom import (
     Casme,
     Casme2,
     Casme3,
@@ -9,7 +9,7 @@ from .datasets import (
     Megc,
     Mmew,
     Samm,
-    Smic,
+    # Smic,
 )
 from .sampling import NoisyUniformTemporalSubsample, UniformTemporalSubsample
 
