@@ -8,13 +8,28 @@ import os
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
+from dynamic_network_architectures.initialization.weight_init import init_last_bn_before_add_to_0
 from sklearn.preprocessing import LabelEncoder
 from torch import optim
+from torchinfo import summary
 from tqdm import tqdm
 
 from meb import utils
 from meb.datasets.dataset_utils import InputData
 from meb.utils.utils import NullScaler
+
+
+class InitWeights_He(object):
+    def __init__(self, neg_slope=1e-2):
+        self.neg_slope = neg_slope
+
+    def __call__(self, module):
+        if isinstance(module, nn.Conv3d) or isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d) or isinstance(module, nn.ConvTranspose3d):
+            module.weight = nn.init.kaiming_normal_(module.weight, a=self.neg_slope)
+            if module.bias is not None:
+                module.bias = nn.init.constant_(module.bias, 0)
+        return
 
 
 class Config(metaclass=utils.ReprMeta):
@@ -326,6 +341,10 @@ class Validator(ABC):
         self.loss_scaler = (
             self.cf.loss_scaler() if self.cf.loss_scaler else NullScaler()
         )
+
+        self.model.apply(InitWeights_He(1e-2))
+        self.model.apply(init_last_bn_before_add_to_0)
+        # summary(self.model, input_size=[1, 3, 64, 64])
 
     def validate_split(
         self,

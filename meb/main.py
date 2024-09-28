@@ -19,10 +19,10 @@ import torch.optim as optim
 import torchvision
 import timm
 import click
+from tqdm import tqdm
 from numba import jit, njit
 from torchvision import transforms
 from torch.backends import cudnn
-from tqdm import tqdm
 
 
 class Config(core.Config):
@@ -37,7 +37,10 @@ class Config(core.Config):
 class MConfig(Config):
     epochs = 200
     optimizer = partial(optim.Adam, lr=1e-4, weight_decay=1e-3)
-    model = partial(models.SSSNet, num_classes=len(Config.action_units))
+
+    # model = partial(models.SSSNet, num_classes=len(Config.action_units))
+    model = partial(models.VSSMEncoder, num_classes=len(Config.action_units))
+    # model = partial(models.ZZZNet, num_classes=len(Config.action_units))
 
 
 def set_random_seed(seed):
