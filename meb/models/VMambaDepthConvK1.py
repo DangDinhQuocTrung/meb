@@ -390,7 +390,7 @@ class ZZZNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(h1)
         self.drop1 = nn.Dropout2d(dropout)
 
-        self.conv2 = nn.Conv2d(in_channels=h1, out_channels=h2, kernel_size=1, stride=1)
+        self.conv2 = nn.Conv2d(in_channels=h1, out_channels=h2, kernel_size=3, stride=1)
         self.bn2 = nn.BatchNorm2d(h2)
         self.drop2 = nn.Dropout2d(dropout)
 
@@ -403,13 +403,13 @@ class ZZZNet(nn.Module):
             mode="even",
             conv_mode="full",
             d_depth_stride=2,
-            d_depth_out=100,
-            d_depth_squeeze=2,
+            d_depth_out=81,
+            d_depth_squeeze=4,
         )
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.drop3 = nn.Dropout2d(dropout)
 
-        self.fc1 = nn.Linear(6400, h3)
+        self.fc1 = nn.Linear(5184, h3)
         self.drop3 = nn.Dropout(dropout)
         self.fc = nn.Linear(h3, num_classes)
         self.softmax = None

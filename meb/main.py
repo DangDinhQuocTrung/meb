@@ -39,8 +39,8 @@ class MConfig(Config):
     optimizer = partial(optim.Adam, lr=1e-4, weight_decay=1e-3)
 
     # model = partial(models.SSSNet, num_classes=len(Config.action_units))
-    model = partial(models.VSSMEncoder, num_classes=len(Config.action_units))
-    # model = partial(models.ZZZNet, num_classes=len(Config.action_units))
+    # model = partial(models.VSSMEncoder, num_classes=len(Config.action_units))
+    model = partial(models.ZZZNet, num_classes=len(Config.action_units))
 
 
 def set_random_seed(seed):
@@ -56,7 +56,7 @@ def set_random_seed(seed):
 
 
 @click.command()
-@click.option("--seed", default=11111)
+@click.option("--seed", default=22222)
 def main(seed: int):
     set_random_seed(seed)
 

@@ -697,8 +697,8 @@ class SS2DepthConv_K1(nn.Module):
             out_channels=self.d_inner // squeeze,
             groups=self.d_inner // squeeze,
             bias=conv_bias,
-            kernel_size=d_conv,
-            padding=(d_conv - 1) // 2,
+            kernel_size=1,
+            padding=0,
             **factory_kwargs,
         )
         self.depth_conv = nn.Conv2d(
