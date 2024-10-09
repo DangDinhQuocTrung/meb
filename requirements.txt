@@ -5,7 +5,7 @@ opencv-python
 scikit-image
 matplotlib
 pandas
-numpy
+numpy<2
 timm
 tqdm
 openpyxl
