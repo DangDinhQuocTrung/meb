@@ -304,6 +304,11 @@ class Validator(ABC):
             # Use mixup (i.e., MixVideo) if set in config
             if self.mixup_fn:
                 X, y = self.mixup_fn(X.float(), y.float())
+            else:
+                # Label Smoothing
+                # y = torch.where(y >= 0.8, torch.full_like(y, 0.8), y)
+                y = torch.where(y <= 0.2, torch.full_like(y, 0.2), y)
+                pass
             # Use mixed precision training for faster training if set in config
             # If not set in config uses null functions for amp and loss scaling
             with self.amp_autocast():

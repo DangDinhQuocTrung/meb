@@ -41,6 +41,9 @@ class MConfig(Config):
     # model = partial(models.SSSNet, num_classes=len(Config.action_units))
     # model = partial(models.VSSMEncoder, num_classes=len(Config.action_units))
     model = partial(models.ZZZNet, num_classes=len(Config.action_units))
+    # model = partial(timm.create_model, "vit_tiny_patch16_224", pretrained=True, num_classes=12)
+
+    mixup_fn = None
 
 
 def set_random_seed(seed):
