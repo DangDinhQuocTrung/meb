@@ -4,17 +4,33 @@ from datetime import datetime
 from functools import partial
 from typing import List, Sequence, Tuple, Union
 import os
+import time
 
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn as nn
+from dynamic_network_architectures.initialization.weight_init import init_last_bn_before_add_to_0
 from sklearn.preprocessing import LabelEncoder
 from torch import optim
+from torchinfo import summary
 from tqdm import tqdm
 
 from meb import utils
 from meb.datasets.dataset_utils import InputData
 from meb.utils.utils import NullScaler
+
+
+class InitWeights_He(object):
+    def __init__(self, neg_slope=1e-2):
+        self.neg_slope = neg_slope
+
+    def __call__(self, module):
+        if isinstance(module, nn.Conv3d) or isinstance(module, nn.Conv2d) or isinstance(module, nn.ConvTranspose2d) or isinstance(module, nn.ConvTranspose3d):
+            module.weight = nn.init.kaiming_normal_(module.weight, a=self.neg_slope)
+            if module.bias is not None:
+                module.bias = nn.init.constant_(module.bias, 0)
+        return
 
 
 class Config(metaclass=utils.ReprMeta):
@@ -153,6 +169,7 @@ class Validator(ABC):
         self.amp_autocast = nullcontext
         if self.cf.loss_scaler:
             self.amp_autocast = torch.cuda.amp.autocast
+        self.recent_losses = []
 
         # Validate config
         utils.validate_config(self.cf, Config)
@@ -207,6 +224,7 @@ class Validator(ABC):
             transform = self.cf.test_transform
             # Divide by four to ensure not using too much memory
             batch_size = self.cf.batch_size // 4
+            # batch_size = 1
         dataset = utils.MEData(
             data,
             labels,
@@ -247,6 +265,7 @@ class Validator(ABC):
         This function can be overwritten for custom schedulers, printing,
         etc.
         """
+        self.recent_losses = []
         for epoch in tqdm(range(self.cf.epochs), disable=self.disable_tqdm):
             self.train_one_epoch(epoch, train_loader)
             if self.scheduler:
@@ -281,6 +300,8 @@ class Validator(ABC):
         """
         # Track number of updates for scheduler
         num_updates = epoch * len(dataloader)
+        lambda_param = 1.5
+
         for i, (X, y) in enumerate(dataloader):
             # Use channels_last memory format to speed up training
             X = X.to(self.cf.device, memory_format=self.cf.channels_last)
@@ -289,14 +310,46 @@ class Validator(ABC):
             # Use mixup (i.e., MixVideo) if set in config
             if self.mixup_fn:
                 X, y = self.mixup_fn(X.float(), y.float())
+            else:
+                # Label Smoothing
+                # y = torch.where(y >= 0.8, torch.full_like(y, 0.8), y)
+                y = torch.where(y <= 0.2, torch.full_like(y, 0.2), y)
+                pass
+
             # Use mixed precision training for faster training if set in config
             # If not set in config uses null functions for amp and loss scaling
             with self.amp_autocast():
+                # st = time.time()
                 outputs = self.model(X.float())
+                # print(1.0 / (time.time() - st))
                 loss = self.criterion(outputs, y)
+
+            # if len(self.recent_losses) > 0:
+            #     mean_loss = np.mean(self.recent_losses)
+            #     std_loss = np.std(self.recent_losses)
+            #     threshold = mean_loss + lambda_param * std_loss
+            #     # Apply thresholding by keeping only samples with loss < threshold
+            #     loss = loss.sum(axis=1)
+            #     mask = (loss <= threshold)
+            #     loss = loss * mask.float()
+            #     loss = loss.mean()
+            #     print(mask.sum())
+            # else:
+            #     loss = loss.sum(axis=1).mean()
+
+            # self.recent_losses.append(loss.item())
+            # if len(self.recent_losses) > 100:
+            #     # Keep only the most recent 100 losses (or batch size)
+            #     self.recent_losses.pop(0)
+
+            loss = loss.sum(axis=1)
+            loss[loss > (loss.mean() + lambda_param * loss.std())] = 0.0
+            loss = loss.mean()
+
             self.loss_scaler.scale(loss).backward()
             self.loss_scaler.step(self.optimizer)
             self.loss_scaler.update()
+
             num_updates += 1
             if self.scheduler:
                 self.scheduler.step_update(num_updates=num_updates)
@@ -316,7 +369,7 @@ class Validator(ABC):
         and mixup. This function can be overwritten to setup custom objects.
         """
         self.model = self.cf.model()
-        self.criterion = self.cf.criterion()
+        self.criterion = self.cf.criterion(reduction="none")
         self.model.to(self.cf.device, memory_format=self.cf.channels_last)
         self.optimizer = self.cf.optimizer(self.model.parameters())
         self.scheduler = (
@@ -326,6 +379,10 @@ class Validator(ABC):
         self.loss_scaler = (
             self.cf.loss_scaler() if self.cf.loss_scaler else NullScaler()
         )
+
+        self.model.apply(InitWeights_He(1e-2))
+        self.model.apply(init_last_bn_before_add_to_0)
+        # summary(self.model, input_size=[1, 3, 64, 64])
 
     def validate_split(
         self,
@@ -361,6 +418,7 @@ class Validator(ABC):
         self.train_model(train_loader, test_loader, split_name)
         train_metrics = self.evaluate_model(train_loader)
         test_metrics, outputs_test = self.evaluate_model(test_loader, test=True)
+        # train_metrics = test_metrics
         return train_metrics, test_metrics, outputs_test
 
     def evaluate_model(
@@ -371,16 +429,22 @@ class Validator(ABC):
         the evaluation result and if boolean test is set to true also the
         predictions.
         """
+        # self.model.load_state_dict(torch.load("/home/common/general/affective/project/casme.pth"))
         self.model.eval()
         outputs_list = []
         labels_list = []
         with torch.no_grad():
-            for batch in dataloader:
+            for bi, batch in enumerate(dataloader):
                 data_batch = batch[0].to(self.cf.device)
                 labels_batch = batch[1]
                 outputs = self.model(data_batch.float())
                 outputs_list.append(outputs.detach().cpu())
                 labels_list.append(labels_batch)
+                # if torch.any((torch.sigmoid(outputs.detach().cpu()) > 0.5) & (labels_batch > 0.5)):
+                # if bi in [0, 49, 52]:
+                #     print(torch.sigmoid(outputs.detach().cpu()))
+                #     print(labels_batch)
+                #     print()
         self.model.train()
         predictions = torch.cat(outputs_list)
         labels = torch.cat(labels_list)
@@ -452,6 +516,7 @@ class CrossDatasetValidator(Validator):
                 self.printer.print_train_test_evaluation(
                     train_metrics, test_metrics, dataset_name, outputs_test.shape[0]
                 )
+            # break
 
         # Calculate total f1-scores
         predictions = torch.cat(outputs_list)

@@ -133,7 +133,7 @@ class Printer:
                     "All AUs: ",
                     list(zip(self.cf.action_units, np.around(np.array(metric) * 100, 2))),
                 )
-            
+
             print("Mean: ", np.around(np.mean(metric) * 100, 2))
             print("\n")
 
