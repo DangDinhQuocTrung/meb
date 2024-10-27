@@ -44,6 +44,7 @@ class MConfig(Config):
     # model = partial(timm.create_model, "vit_tiny_patch16_224", pretrained=True, num_classes=12)
 
     mixup_fn = None
+    weights_name = "/home/common/general/affective/project/meb/weights/"
 
 
 def set_random_seed(seed):
@@ -67,7 +68,7 @@ def main(seed: int):
     df = c.data_frame
     data = c.data
 
-    core.CrossDatasetValidator(MConfig).validate_n_times(df, data, n_times=1)
+    core.CrossDatasetValidator(MConfig).validate_n_times(df, data, n_times=5)
 
 
 if __name__ == "__main__":
