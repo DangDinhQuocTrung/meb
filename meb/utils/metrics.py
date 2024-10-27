@@ -26,7 +26,7 @@ class MultiLabelBCELoss(nn.Module):
     def forward(self, outputs: torch.Tensor, labels: torch.Tensor) -> float:
         loss = self.loss(outputs, labels.float())
         return loss
-    
+
 class MultiClassCELoss(nn.Module):
     """Multi-class cross entropy loss wrapper
 

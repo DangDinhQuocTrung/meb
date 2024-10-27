@@ -406,11 +406,14 @@ class ZZZNet(nn.Module):
             d_depth_out=81,
             d_depth_squeeze=4,
         )
+        # self.conv3 = nn.Conv2d(in_channels=h2, out_channels=h2, kernel_size=3, stride=1, padding=1)
+        # self.conv3 = nn.TransformerEncoderLayer(d_model=h2, nhead=8, batch_first=True, dropout=dropout)
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.bn3 = nn.BatchNorm2d(h2)
         self.drop3 = nn.Dropout2d(dropout)
 
         self.fc1 = nn.Linear(5184, h3)
-        self.drop3 = nn.Dropout(dropout)
+        self.drop4 = nn.Dropout(dropout)
         self.fc = nn.Linear(h3, num_classes)
         self.softmax = None
         if softmax:
@@ -421,12 +424,21 @@ class ZZZNet(nn.Module):
         x = self.drop1(self.bn1(self.pool(F.relu(self.conv1(x)))))
         x = self.drop2(self.bn2(F.relu(self.conv2(x))))
 
+        b, h, w, c = x.shape
+        # Mamba
         x = x.permute(0, 2, 3, 1)
         x = self.drop3(self.pool3(self.conv3(x)))
+        # CNN
+        # x = self.drop3(self.bn3(self.pool3(F.relu(self.conv3(x)))))
+        # ViT
+        # x = x.permute(0, 2, 3, 1).view(x.shape[0], -1, x.shape[1])
+        # x = F.relu(self.conv3(x))
+        # x = x.view(b, h, w, c)
+        # x = self.pool3(x)
 
         x = x.view(x.shape[0], -1)
         x = F.relu(self.fc1(x))
-        x = self.fc(self.drop3(x))
+        x = self.fc(self.drop4(x))
         if self.softmax:
             x = self.softmax(x)
         return x
